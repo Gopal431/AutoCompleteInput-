@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { FaSearch, FaTimes } from "react-icons/fa";
 import debounce from "lodash.debounce";
 import jsonData from "../src/data.json";
@@ -8,21 +8,34 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredData, setFilteredData] = useState([]);
 
-  useEffect(() => {
-    const debouncedFilter = debounce((term) => {
-      if (!term) {
-        setFilteredData([]);
-        return;
-      }
-      const results = jsonData.filter((item) =>
-        item.name.toLowerCase().includes(term.toLowerCase())
-      );
-      setFilteredData(results);
-    }, 300);
 
-    debouncedFilter(searchTerm);
-    return () => debouncedFilter.cancel();
-  }, [searchTerm]);
+  const debouncedFilter = useCallback(
+    debounce((term) => {
+      if (term) {
+        const results = jsonData.filter((item) =>
+          item.name.toLowerCase().includes(term.toLowerCase())
+        );
+        setFilteredData(results);
+      } else {
+        setFilteredData([]);
+      }
+    }, 300),
+    []
+  );
+
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedFilter(value);
+  };
+
+
+  const handleSuggestionClick = (item) => {
+    setSearchTerm(item.name);
+    setFilteredData([]);
+  };
+
 
   const highlightMatch = (text, query) => {
     if (!query) return text;
@@ -52,7 +65,7 @@ export default function Home() {
           className="w-full p-2 outline-none bg-transparent rounded-full"
           placeholder="Search..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
         />
         {searchTerm && (
           <FaTimes
@@ -62,9 +75,13 @@ export default function Home() {
         )}
       </div>
       {filteredData.length > 0 && (
-        <ul className="mt-2 ">
+        <ul className="mt-2">
           {filteredData.map((item) => (
-            <li key={item.id} className="p-2 hover:bg-gray-100 cursor-pointer flex items-center">
+            <li
+              key={item.id}
+              className="p-2 hover:bg-gray-100 cursor-pointer flex items-center"
+              onClick={() => handleSuggestionClick(item)}
+            >
               <FaSearch className="text-gray-400 mr-2" />
               {highlightMatch(item.name, searchTerm)}
             </li>
